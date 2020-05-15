@@ -1,3 +1,4 @@
+export ALLOW_MISSING_DEPENDENCIES=true
 function hmm() {
 cat <<EOF
 
@@ -43,7 +44,7 @@ EOF
     local T=$(gettop)
     local A=""
     local i
-    for i in `cat $T/build/envsetup.sh $T/vendor/omni/build/envsetup.sh | sed -n "/^[[:blank:]]*function /s/function \([a-z_]*\).*/\1/p" | sort | uniq`; do
+    for i in `cat $T/build/envsetup.sh $T/vendor/batik/build/envsetup.sh | sed -n "/^[[:blank:]]*function /s/function \([a-z_]*\).*/\1/p" | sort | uniq`; do
       A="$A $i"
     done
     echo $A
@@ -54,8 +55,8 @@ function build_build_var_cache()
 {
     local T=$(gettop)
     # Grep out the variable names from the script.
-    cached_vars=`cat $T/build/envsetup.sh $T/vendor/omni/build/envsetup.sh | tr '()' '  ' | awk '{for(i=1;i<=NF;i++) if($i~/get_build_var/) print $(i+1)}' | sort -u | tr '\n' ' '`
-    cached_abs_vars=`cat $T/build/envsetup.sh $T/vendor/omni/build/envsetup.sh | tr '()' '  ' | awk '{for(i=1;i<=NF;i++) if($i~/get_abs_build_var/) print $(i+1)}' | sort -u | tr '\n' ' '`
+    cached_vars=`cat $T/build/envsetup.sh $T/vendor/batik/build/envsetup.sh | tr '()' '  ' | awk '{for(i=1;i<=NF;i++) if($i~/get_build_var/) print $(i+1)}' | sort -u | tr '\n' ' '`
+    cached_abs_vars=`cat $T/build/envsetup.sh $T/vendor/batik/build/envsetup.sh | tr '()' '  ' | awk '{for(i=1;i<=NF;i++) if($i~/get_abs_build_var/) print $(i+1)}' | sort -u | tr '\n' ' '`
     # Call the build system to dump the "<val>=<value>" pairs as a shell script.
     build_dicts_script=`\builtin cd $T; build/soong/soong_ui.bash --dumpvars-mode \
                         --vars="$cached_vars" \
@@ -632,13 +633,13 @@ function lunch()
         # if we can't find the product, try to grab it from our github
         T=$(gettop)
         pushd $T > /dev/null
-        vendor/omni/build/tools/roomservice.py $product
+        vendor/batik/build/tools/roomservice.py $product
         popd > /dev/null
         check_product $product
     else
         T=$(gettop)
         pushd $T > /dev/null
-        vendor/omni/build/tools/roomservice.py $product true
+        vendor/batik/build/tools/roomservice.py $product true
         popd > /dev/null
     fi
     if [ $? -ne 0 ]
@@ -662,10 +663,18 @@ function lunch()
     fi
     export CUSTOM_BUILD
 
+    export BR_OFFICIAL_CH=$(get_build_var BR_OFFICIAL)
+    export BR_FORCE_DD_FLASH=$(get_build_var BR_FORCE_DD_FLASH)
     export TARGET_PRODUCT=$product
+    export AB_OTA_UPDATER=$(get_build_var AB_OTA_UPDATER)
     export TARGET_BUILD_VARIANT=$variant
     export TARGET_PLATFORM_VERSION=$(get_build_var TARGET_PLATFORM_VERSION)
     export TARGET_BUILD_TYPE=release
+    export TARGET_ARCH=$(get_build_var TARGET_ARCH)
+
+	if [ -z "$BR_MAINTAINER" ]; then
+	export BR_MAINTAINER="ZHANtech™" # Maintainer
+	fi
 
     echo
 
@@ -1612,7 +1621,7 @@ function _wrap_build()
         color_reset=""
     fi
     echo
-    if [ $ret -eq 0 ] ; then
+    if [ $ret -eq 0 ] && [ "$?" -eq 0 ] ; then
         echo -n "${color_success}#### build completed successfully "
     else
         echo -n "${color_failed}#### failed to build some targets "
@@ -1695,4 +1704,4 @@ addcompletions
 
 export ANDROID_BUILD_TOP=$(gettop)
 
-. $ANDROID_BUILD_TOP/vendor/omni/build/envsetup.sh
+. $ANDROID_BUILD_TOP/vendor/batik/build/envsetup.sh
